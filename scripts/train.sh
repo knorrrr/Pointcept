@@ -6,9 +6,9 @@ PYTHON=python
 
 TRAIN_CODE=train.py
 
-DATASET=scannet
-CONFIG="None"
-EXP_NAME=debug
+DATASET=evpcd
+CONFIG="evpcd_ptv3"
+EXP_NAME="evpcd_ptv3"
 WEIGHT="None"
 RESUME=false
 NUM_GPU=None
