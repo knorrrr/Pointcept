@@ -16,7 +16,7 @@ from .defaults import DefaultDataset
 
 @DATASETS.register_module()
 class EvPcdDataset(DefaultDataset):
-    def __init__(self, sweeps=10, ignore_index=-1, **kwargs):
+    def __init__(self, sweeps=1, ignore_index=-1, **kwargs):
         self.sweeps = sweeps
         self.ignore_index = ignore_index
         self.learning_map = self.get_learning_map(ignore_index)
@@ -26,15 +26,17 @@ class EvPcdDataset(DefaultDataset):
         assert split in ["train", "val", "test"]
         if split == "train":
             return os.path.join(
-                self.data_root, "info", f"nuscenes_infos_{self.sweeps}sweeps_train.pkl"
+                self.data_root, "info", "info.pkl"
             )
         elif split == "val":
             return os.path.join(
-                self.data_root, "info", f"nuscenes_infos_{self.sweeps}sweeps_val.pkl"
+                self.data_root, "info", "info.pkl"
+                # self.data_root, "info", f"nuscenes_infos_{self.sweeps}sweeps_val.pkl"
             )
         elif split == "test":
             return os.path.join(
-                self.data_root, "info", f"nuscenes_infos_{self.sweeps}sweeps_test.pkl"
+                self.data_root, "info", "info.pkl"
+                # self.data_root, "info", f"nuscenes_infos_{self.sweeps}sweeps_test.pkl"
             )
         else:
             raise NotImplementedError

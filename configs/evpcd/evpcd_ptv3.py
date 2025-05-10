@@ -1,7 +1,8 @@
 _base_ = ["../_base_/default_runtime.py"]
 
 # misc custom setting
-batch_size = 12  # bs: total bs in all gpus
+# batch_size = 12  # bs: total bs in all gpus
+batch_size = 1  # bs: total bs in all gpus
 mix_prob = 0.8
 empty_cache = False
 enable_amp = True
@@ -68,29 +69,29 @@ param_dicts = [dict(keyword="block", lr=0.0002)]
 dataset_type = "EvPcdDataset"
 data_root = "data/evpcd"
 ignore_index = -1
-names = [
-    "barrier",
-    "bicycle",
-    "bus",
-    "car",
-    "construction_vehicle",
-    "motorcycle",
-    "pedestrian",
-    "traffic_cone",
-    "trailer",
-    "truck",
-    "driveable_surface",
-    "other_flat",
-    "sidewalk",
-    "terrain",
-    "manmade",
-    "vegetation",
-]
+# names = [
+#     "barrier",
+#     "bicycle",
+#     "bus",
+#     "car",
+#     "construction_vehicle",
+#     "motorcycle",
+#     "pedestrian",
+#     "traffic_cone",
+#     "trailer",
+#     "truck",
+#     "driveable_surface",
+#     "other_flat",
+#     "sidewalk",
+#     "terrain",
+#     "manmade",
+#     "vegetation",
+# ]
 
 data = dict(
     num_classes=16,
     ignore_index=ignore_index,
-    names=names,
+    # names=names,
     train=dict(
         type=dataset_type,
         split="train",
