@@ -9,23 +9,34 @@ def generate_pkl(bin_dir):
 
     data_list = []
 
-    for fname in sorted(os.listdir(bin_dir)):
-        if not fname.endswith(".bin"):
-            continue
-        token = os.path.splitext(fname)[0]
-        lidar_path = os.path.join(os.path.dirname(os.path.abspath(bin_dir)), "bin", fname)
-        # print(lidar_path)
+    bin_files = sorted([f for f in os.listdir(bin_dir) if f.endswith(".bin")])
+    if len(bin_files) < 2:
+        print("❌ Error: .binファイルが2つ以上必要です。")
+        return
+
+    usable_len = len(bin_files) - (len(bin_files) % 2)  # 奇数なら1つ減らす
+
+    for i in range(0, usable_len, 2):
+        lidar_fname = bin_files[i]
+        pred_fname = bin_files[i + 1]
+        lidar_token = os.path.splitext(lidar_fname)[0]
+
+        lidar_path = os.path.join(os.path.abspath(bin_dir), lidar_fname)
+        pred_lidar_path = os.path.join(os.path.abspath(bin_dir), pred_fname)
+
         data_list.append({
             "lidar_path": lidar_path,
-            "lidar_token": token
+            "pred_lidar_path": pred_lidar_path,
+            "lidar_token": lidar_token
         })
 
-    # 保存先ディレクトリ: bin_dir の親ディレクトリに info フォルダを作成
+    if len(bin_files) % 2 == 1:
+        print(f"⚠️ binファイル数が奇数なので、最後の1つ（{bin_files[-1]}）は無視されました。")
+
     parent_dir = os.path.dirname(bin_dir.rstrip("/"))
     info_dir = os.path.join(parent_dir, "info")
     os.makedirs(info_dir, exist_ok=True)
 
-    # 保存先ファイル名
     save_path = os.path.join(info_dir, "info.pkl")
 
     with open(save_path, "wb") as f:

@@ -64,22 +64,30 @@ class EvPcdDataset(DefaultDataset):
         coord = points[:, :3]
         strength = points[:, 3].reshape([-1, 1]) / 255  # scale strength to [0, 1]
 
-        if "gt_segment_path" in data.keys():
-            gt_segment_path = os.path.join(
-                self.data_root, "raw", data["gt_segment_path"]
-            )
-            segment = np.fromfile(
-                str(gt_segment_path), dtype=np.uint8, count=-1
-            ).reshape([-1])
-            segment = np.vectorize(self.learning_map.__getitem__)(segment).astype(
-                np.int64
-            )
-        else:
-            segment = np.ones((points.shape[0],), dtype=np.int64) * self.ignore_index
+        pred_lidar_path = os.path.join(self.data_root, "raw", data["pred_lidar_path"])
+        pred_points = np.fromfile(str(pred_lidar_path), dtype=np.float32, count=-1).reshape(
+            [-1, 5]
+        )
+        pred_coord = pred_points[:, :3]
+
+        # if "gt_segment_path" in data.keys():
+        #     gt_segment_path = os.path.join(
+        #         self.data_root, "raw", data["gt_segment_path"]
+        #     )
+        #     segment = np.fromfile(
+        #         str(gt_segment_path), dtype=np.uint8, count=-1
+        #     ).reshape([-1])
+        #     segment = np.vectorize(self.learning_map.__getitem__)(segment).astype(
+        #         np.int64
+        #     )
+        # else:
+        #     segment = np.ones((points.shape[0],), dtype=np.int64) * self.ignore_index
+
         data_dict = dict(
             coord=coord,
             strength=strength,
-            segment=segment,
+            pred_coord=pred_coord,
+            # segment=segment,
             name=self.get_data_name(idx),
         )
         return data_dict

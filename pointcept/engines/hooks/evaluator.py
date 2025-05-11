@@ -18,6 +18,82 @@ from pointcept.utils.misc import intersection_and_union_gpu
 from .default import HookBase
 from .builder import HOOKS
 
+@HOOKS.register_module()
+class PcdEvaluator(HookBase):
+    def after_epoch(self):
+        if self.trainer.cfg.evaluate:
+            self.eval()
+
+    def eval(self):
+        self.trainer.logger.info(">>>>>>>>>>>>>>>> Start Evaluation (Completion) >>>>>>>>>>>>>>>>")
+        self.trainer.model.eval()
+        total_loss = 0.0
+        total_chamfer = 0.0
+        count = 0
+
+        for i, input_dict in enumerate(self.trainer.val_loader):
+            for key in input_dict.keys():
+                if isinstance(input_dict[key], torch.Tensor):
+                    input_dict[key] = input_dict[key].cuda(non_blocking=True)
+            with torch.no_grad():
+                output_dict = self.trainer.model(input_dict)
+
+            pred_coord = output_dict["pred_coord"]      # [M, 3]
+            gt_coord = input_dict["pred_coord"]         # [N, 3]
+            loss = output_dict["loss"]
+
+            def safe_chamfer(pred, target, chunk_size=4096):
+                min1 = []
+                for i in range(0, pred.shape[0], chunk_size):
+                    d = torch.cdist(pred[i:i+chunk_size], target)
+                    min1.append(d.min(dim=1)[0])
+                min1 = torch.cat(min1)
+
+                min2 = []
+                for i in range(0, target.shape[0], chunk_size):
+                    d = torch.cdist(target[i:i+chunk_size], pred)
+                    min2.append(d.min(dim=1)[0])
+                min2 = torch.cat(min2)
+                return min1.mean() + min2.mean()
+
+            # Chamfer Distance 計算 (再確認)
+            cd = safe_chamfer(pred_coord, gt_coord)
+
+            total_loss += loss.item()
+            total_chamfer += cd.item()
+            count += 1
+
+            self.trainer.logger.info(
+                f"Eval [{i+1}/{len(self.trainer.val_loader)}] Loss: {loss.item():.4f}, Chamfer: {cd.item():.4f}"
+            )
+
+        avg_loss = total_loss / count
+        avg_chamfer = total_chamfer / count
+
+        self.trainer.logger.info(
+            f"Completion Eval Result: AvgLoss {avg_loss:.4f}, AvgChamfer {avg_chamfer:.4f}"
+        )
+
+        current_epoch = self.trainer.epoch + 1
+        if self.trainer.writer is not None:
+            self.trainer.writer.add_scalar("val/loss", avg_loss, current_epoch)
+            self.trainer.writer.add_scalar("val/chamfer", avg_chamfer, current_epoch)
+
+            if self.trainer.cfg.enable_wandb:
+                wandb.log(
+                    {
+                        "Epoch": current_epoch,
+                        "val/loss": avg_loss,
+                        "val/chamfer": avg_chamfer,
+                    },
+                    step=wandb.run.step,
+                )
+
+        self.trainer.logger.info("<<<<<<<<<<<<<<<<< End Evaluation (Completion) <<<<<<<<<<<<<<<<<")
+        self.trainer.comm_info["current_metric_value"] = -avg_chamfer  # lower is better
+        self.trainer.comm_info["current_metric_name"] = "-Chamfer"
+
+
 
 @HOOKS.register_module()
 class ClsEvaluator(HookBase):

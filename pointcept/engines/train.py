@@ -158,10 +158,13 @@ class Trainer(TrainerBase):
             self.before_train()
             self.logger.info(">>>>>>>>>>>>>>>> Start Training >>>>>>>>>>>>>>>>")
             for self.epoch in range(self.start_epoch, self.max_epoch):
+                print(
+                    f"!!!!!!!Epoch {self.epoch}/{self.max_epoch} ")
                 # => before epoch
                 if comm.get_world_size() > 1:
                     self.train_loader.sampler.set_epoch(self.epoch)
                 self.model.train()
+                print("Taining...")
                 self.data_iterator = enumerate(self.train_loader)
                 self.before_epoch()
                 # => run_epoch
@@ -170,14 +173,17 @@ class Trainer(TrainerBase):
                     self.comm_info["input_dict"],
                 ) in self.data_iterator:
                     # => before_step
+                    print("Training step...")
                     self.before_step()
                     # => run_step
                     self.run_step()
                     # => after_step
                     self.after_step()
                 # => after epoch
+                print("Epoch finished")
                 self.after_epoch()
             # => after train
+            print("Training finished")
             self.after_train()
 
     def run_step(self):

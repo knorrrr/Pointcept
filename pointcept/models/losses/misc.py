@@ -9,6 +9,33 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from .builder import LOSSES
+from pointops import knn_query
+
+
+@LOSSES.register_module()
+class ChamferDistanceLoss(nn.Module):
+    def __init__(self, loss_weight=1.0):
+        super().__init__()
+        self.loss_weight = loss_weight
+
+    def forward(self, pred, target, offset_pred=None, offset_target=None):
+        def safe_chamfer(pred, target, chunk_size=4096):
+            min1 = []
+            for i in range(0, pred.shape[0], chunk_size):
+                d = torch.cdist(pred[i:i+chunk_size], target)
+                min1.append(d.min(dim=1)[0])
+            min1 = torch.cat(min1)
+
+            min2 = []
+            for i in range(0, target.shape[0], chunk_size):
+                d = torch.cdist(target[i:i+chunk_size], pred)
+                min2.append(d.min(dim=1)[0])
+            min2 = torch.cat(min2)
+
+            return min1.mean() + min2.mean()
+
+        loss = safe_chamfer(pred.float(), target.float()) * self.loss_weight
+        return loss
 
 
 @LOSSES.register_module()

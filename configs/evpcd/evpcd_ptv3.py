@@ -7,10 +7,20 @@ mix_prob = 0.8
 empty_cache = False
 enable_amp = True
 
+# hook
+hooks = [
+    dict(type="CheckpointLoader"),
+    dict(type="ModelHook"),
+    dict(type="IterationTimer", warmup_iter=2),
+    dict(type="InformationWriter"),
+    dict(type="PcdEvaluator"),
+    dict(type="CheckpointSaver", save_freq=None),
+    dict(type="PreciseEvaluator", test_last=False),
+]
 # model settings
 model = dict(
-    type="DefaultSegmentorV2",
-    num_classes=16,
+    type="DefaultPcdPredictor",
+    # num_classes=16,
     backbone_out_channels=64,
     backbone=dict(
         type="PT-v3m1",
@@ -46,14 +56,17 @@ model = dict(
         pdnorm_conditions=("nuScenes", "SemanticKITTI", "Waymo"),
     ),
     criteria=[
-        dict(type="CrossEntropyLoss", loss_weight=1.0, ignore_index=-1),
-        dict(type="LovaszLoss", mode="multiclass", loss_weight=1.0, ignore_index=-1),
+        dict(type="ChamferDistanceLoss", loss_weight=1.0)
+        # dict(type="CrossEntropyLoss", loss_weight=1.0, ignore_index=-1),
+        # dict(type="LovaszLoss", mode="multiclass", loss_weight=1.0, ignore_index=-1),
     ],
 )
 
 # scheduler settings
-epoch = 50
-eval_epoch = 50
+# epoch = 50
+epoch = 2 
+# eval_epoch = 50
+eval_epoch = 2 
 optimizer = dict(type="AdamW", lr=0.002, weight_decay=0.005)
 scheduler = dict(
     type="OneCycleLR",
@@ -109,7 +122,8 @@ data = dict(
             # dict(type="ElasticDistortion", distortion_params=[[0.2, 0.4], [0.8, 1.6]]),
             dict(
                 type="GridSample",
-                grid_size=0.05,
+                # grid_size=0.05,
+                grid_size=5,
                 hash_type="fnv",
                 mode="train",
                 return_grid_coord=True,
@@ -119,7 +133,7 @@ data = dict(
             dict(type="ToTensor"),
             dict(
                 type="Collect",
-                keys=("coord", "grid_coord", "segment"),
+                keys=("coord", "grid_coord", "pred_coord"),
                 feat_keys=("coord", "strength"),
             ),
         ],
@@ -143,7 +157,7 @@ data = dict(
             dict(type="ToTensor"),
             dict(
                 type="Collect",
-                keys=("coord", "grid_coord", "segment"),
+                keys=("coord", "grid_coord", "pred_coord"),
                 feat_keys=("coord", "strength"),
             ),
         ],

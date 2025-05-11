@@ -42,4 +42,5 @@ hooks = [
 train = dict(type="DefaultTrainer")
 
 # Tester
-test = dict(type="SemSegTester", verbose=True)
+# test = dict(type="SemSegTester", verbose=True)
+test = dict(type="PcdTester", verbose=True)

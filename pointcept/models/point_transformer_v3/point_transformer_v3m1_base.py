@@ -696,12 +696,24 @@ class PointTransformerV3(PointModule):
                     )
                 self.dec.add(module=dec, name=f"dec{s}")
 
+# 例：
     def forward(self, data_dict):
         point = Point(data_dict)
         point.serialization(order=self.order, shuffle_orders=self.shuffle_orders)
         point.sparsify()
 
         point = self.embedding(point)
+        # def get_point_size(point):
+        #     total_bytes = sum(
+        #         v.element_size() * v.numel()
+        #         for v in point.values()
+        #         if isinstance(v, torch.Tensor)
+        #     )
+        #     total_mb = total_bytes / (1024 ** 2)
+        #     total_gb = total_bytes / (1024 ** 3)
+        #     print(f"📦 Point size: {total_mb:.2f} MB ({total_gb:.4f} GB)")
+        #     return total_bytes
+        # print(get_point_size(point))
         point = self.enc(point)
         if not self.cls_mode:
             point = self.dec(point)

@@ -18,6 +18,7 @@ def main_worker(cfg):
     cfg = default_setup(cfg)
     trainer = TRAINERS.build(dict(type=cfg.train.type, cfg=cfg))
     trainer.train()
+    # traine.model()でアクセすできるから、直接流しこむ
 
 
 def main():

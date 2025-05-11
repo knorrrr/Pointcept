@@ -1,8 +1,10 @@
 #!/bin/bash
 
 # デフォルト値の設定
-DEFAULT_PATH_BAG="$HOME/Pointcept/data/evpcd/rosbag/"
-DEFAULT_TOPIC_CLOUD="/iv_points"
+# DEFAULT_PATH_BAG="$HOME/Pointcept/data/evpcd/rosbag/"
+DEFAULT_PATH_BAG="$HOME/Pointcept/data/evpcd/light_lidar.bag/"
+# DEFAULT_TOPIC_CLOUD="/iv_points"
+DEFAULT_TOPIC_CLOUD="/sensing/lidar/top/pointcloud_raw"
 DEFAULT_OUTPUT_PATH="$HOME/Pointcept/data/evpcd/bin/"
 
 # 引数の受け取り（なければデフォルト）
