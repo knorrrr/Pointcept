@@ -5,10 +5,10 @@ PYTHON=python
 
 TEST_CODE=test.py
 
-DATASET=scannet
-CONFIG="None"
-EXP_NAME=debug
-WEIGHT=model_best
+DATASET=evpcd
+CONFIG="evpcd_ptv3"
+EXP_NAME="evpcd_ptv3"
+WEIGHT="model_best"
 NUM_GPU=None
 NUM_MACHINE=1
 DIST_URL="auto"
@@ -83,6 +83,13 @@ echo "Running code in: $CODE_DIR"
 echo " =========> RUN TASK <========="
 
 #$PYTHON -u "$CODE_DIR"/tools/$TEST_CODE \
+echo "$PYTHON -u tools/$TEST_CODE \
+  --config-file \"$CONFIG_DIR\" \
+  --num-gpus \"$NUM_GPU\" \
+  --num-machines \"$NUM_MACHINE\" \
+  --machine-rank ${SLURM_NODEID:-0} \
+  --dist-url ${DIST_URL} \
+  --options save_path=\"$EXP_DIR\" weight=\"${MODEL_DIR}/${WEIGHT}.pth\""
 $PYTHON -u tools/$TEST_CODE \
   --config-file "$CONFIG_DIR" \
   --num-gpus "$NUM_GPU" \

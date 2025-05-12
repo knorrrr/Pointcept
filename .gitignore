@@ -1,6 +1,8 @@
 image/
 __pycache__
 **/build/
+**/envs/
+**/install/
 **/*.egg-info/
 **/dist/
 *.so

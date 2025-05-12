@@ -18,7 +18,9 @@ def main_worker(cfg):
     cfg = default_setup(cfg)
     test_cfg = dict(cfg=cfg, **cfg.test)
     tester = TESTERS.build(test_cfg)
+    print("BUILD TESTER START")
     tester.test()
+    print("BUILD TESTER END")
 
 
 def main():

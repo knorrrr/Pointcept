@@ -116,8 +116,10 @@ class TrainerBase:
         # Sync GPU before running train hooks
         comm.synchronize()
         for h in self.hooks:
+            print("After train hook")
             h.after_train()
         if comm.is_main_process():
+            print("After train hook is main process")
             self.writer.close()
 
 
@@ -173,7 +175,6 @@ class Trainer(TrainerBase):
                     self.comm_info["input_dict"],
                 ) in self.data_iterator:
                     # => before_step
-                    print("Training step...")
                     self.before_step()
                     # => run_step
                     self.run_step()
@@ -183,8 +184,9 @@ class Trainer(TrainerBase):
                 print("Epoch finished")
                 self.after_epoch()
             # => after train
-            print("Training finished")
+            print("###Training finished")
             self.after_train()
+            print("###After Train finished")
 
     def run_step(self):
         if version.parse(torch.__version__) >= version.parse("2.4"):

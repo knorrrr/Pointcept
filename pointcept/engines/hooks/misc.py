@@ -288,7 +288,9 @@ class PreciseEvaluator(HookBase):
         torch.cuda.empty_cache()
         cfg = self.trainer.cfg
         test_cfg = dict(cfg=cfg, model=self.trainer.model, **cfg.test)
+        print("Start Precise Evaluation")
         tester = TESTERS.build(test_cfg)
+        print("Tester built")
         if self.test_last:
             self.trainer.logger.info("=> Testing on model_last ...")
         else:

@@ -9,6 +9,7 @@ import os
 import numpy as np
 from collections.abc import Sequence
 import pickle
+from copy import deepcopy
 
 from .builder import DATASETS
 from .defaults import DefaultDataset
@@ -82,7 +83,6 @@ class EvPcdDataset(DefaultDataset):
         #     )
         # else:
         #     segment = np.ones((points.shape[0],), dtype=np.int64) * self.ignore_index
-
         data_dict = dict(
             coord=coord,
             strength=strength,
@@ -95,6 +95,48 @@ class EvPcdDataset(DefaultDataset):
     def get_data_name(self, idx):
         # return data name for lidar seg, optimize the code when need to support detection
         return self.data_list[idx % len(self.data_list)]["lidar_token"]
+
+    def prepare_test_data(self, idx):
+        print("TOMOKI prepare_test_data")
+        # load data
+        data_dict = self.get_data(idx)
+        print("data_dict before", data_dict.keys())
+        data_dict = self.transform(data_dict)
+        print("data_dict", data_dict.keys())
+
+        # 点群補完では pred_coord を ground truth として使用する
+        result_dict = dict(pred_coord=data_dict.pop("pred_coord"), name=data_dict.pop("name"))
+
+        if "origin_pred_coord" in data_dict:
+            assert "inverse" in data_dict
+            result_dict["origin_pred_coord"] = data_dict.pop("origin_pred_coord")
+            result_dict["inverse"] = data_dict.pop("inverse")
+
+        data_dict_list = []
+        for aug in self.aug_transform:
+            data_dict_list.append(aug(deepcopy(data_dict)))
+
+        fragment_list = []
+        for data in data_dict_list:
+            if self.test_voxelize is not None:
+                data_part_list = self.test_voxelize(data)
+            else:
+                data["index"] = np.arange(data["coord"].shape[0])
+                data_part_list = [data]
+            for data_part in data_part_list:
+                if self.test_crop is not None:
+                    data_part = self.test_crop(data_part)
+                else:
+                    data_part = [data_part]
+                fragment_list += data_part
+
+        for i in range(len(fragment_list)):
+            # print("FRAGMENT!!!")
+            fragment_list[i] = self.post_transform(fragment_list[i])
+
+        result_dict["fragment_list"] = fragment_list
+        print("result_dict", result_dict["fragment_list"][0].keys())
+        return result_dict
 
     @staticmethod
     def get_learning_map(ignore_index):

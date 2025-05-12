@@ -64,9 +64,9 @@ model = dict(
 
 # scheduler settings
 # epoch = 50
-epoch = 2 
+epoch = 1
 # eval_epoch = 50
-eval_epoch = 2 
+eval_epoch = 1 
 optimizer = dict(type="AdamW", lr=0.002, weight_decay=0.005)
 scheduler = dict(
     type="OneCycleLR",
@@ -82,24 +82,6 @@ param_dicts = [dict(keyword="block", lr=0.0002)]
 dataset_type = "EvPcdDataset"
 data_root = "data/evpcd"
 ignore_index = -1
-# names = [
-#     "barrier",
-#     "bicycle",
-#     "bus",
-#     "car",
-#     "construction_vehicle",
-#     "motorcycle",
-#     "pedestrian",
-#     "traffic_cone",
-#     "trailer",
-#     "truck",
-#     "driveable_surface",
-#     "other_flat",
-#     "sidewalk",
-#     "terrain",
-#     "manmade",
-#     "vegetation",
-# ]
 
 data = dict(
     num_classes=16,
@@ -169,7 +151,7 @@ data = dict(
         split="val",
         data_root=data_root,
         transform=[
-            dict(type="Copy", keys_dict={"segment": "origin_segment"}),
+            # dict(type="Copy", keys_dict={"pred_coord": "origin_pred_coord"}),  # ← segment → pred_coord
             dict(
                 type="GridSample",
                 grid_size=0.025,
@@ -221,6 +203,6 @@ data = dict(
                 ],
             ],
         ),
-        ignore_index=ignore_index,
+        ignore_index=-1,
     ),
 )
