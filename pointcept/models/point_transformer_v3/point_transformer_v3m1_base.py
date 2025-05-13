@@ -435,7 +435,6 @@ class SerializedPooling(PointModule):
         if self.traceable:
             point_dict["pooling_inverse"] = cluster
             point_dict["pooling_parent"] = point
-        print("SERIALIZED POOLING!!!!!!")
         point = Point(point_dict)
         if self.norm is not None:
             point = self.norm(point)
@@ -699,10 +698,7 @@ class PointTransformerV3(PointModule):
 
 # 例：
     def forward(self, data_dict):
-        print("FORARDING!!!!!!!!!!!!")
-        print("data_dict", data_dict.keys())
         point = Point(data_dict)
-        print("point", point.keys())
         point.serialization(order=self.order, shuffle_orders=self.shuffle_orders)
         point.sparsify()
 

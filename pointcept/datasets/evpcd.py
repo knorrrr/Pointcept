@@ -97,12 +97,9 @@ class EvPcdDataset(DefaultDataset):
         return self.data_list[idx % len(self.data_list)]["lidar_token"]
 
     def prepare_test_data(self, idx):
-        print("TOMOKI prepare_test_data")
         # load data
         data_dict = self.get_data(idx)
-        print("data_dict before", data_dict.keys())
         data_dict = self.transform(data_dict)
-        print("data_dict", data_dict.keys())
 
         # 点群補完では pred_coord を ground truth として使用する
         result_dict = dict(pred_coord=data_dict.pop("pred_coord"), name=data_dict.pop("name"))
@@ -131,11 +128,9 @@ class EvPcdDataset(DefaultDataset):
                 fragment_list += data_part
 
         for i in range(len(fragment_list)):
-            # print("FRAGMENT!!!")
             fragment_list[i] = self.post_transform(fragment_list[i])
 
         result_dict["fragment_list"] = fragment_list
-        print("result_dict", result_dict["fragment_list"][0].keys())
         return result_dict
 
     @staticmethod

@@ -61,16 +61,7 @@ class DefaultPcdPredictor(nn.Module):
                 p.requires_grad = False
 
     def forward(self, input_dict, return_point=False):
-        logger = get_root_logger()
-
-        logger.error("DefaultPcdPredictor")
-        logger.error(f"INPUT keys: {input_dict.keys()}")
-        print("DefaultPcdPredictor")
-        print("INPUT",input_dict.keys())
         point = Point(input_dict)
-        print("POINT",point.keys())
-        logger.error(f"POINT keys: {point.keys()}")
-
         point = self.backbone(point)
         # Backbone added after v1.5.0 return Point instead of feat and use DefaultSegmentorV2
         # TODO: remove this part after make all backbone return Point only.

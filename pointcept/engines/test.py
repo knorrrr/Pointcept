@@ -126,10 +126,8 @@ class PcdTester(TesterBase):
         logger.info(">>>>>>>>>>>>>> Start Evaluation (PCD Completion) >>>>>>>>>>>>>>>>")
 
         chamfer_meter = AverageMeter()
-        print("EVAL START")
         self.model.eval()
         self.model.to("cuda")
-        print("END")
 
         save_path = os.path.join(self.cfg.save_path, "completion_result")
         make_dirs(save_path)
@@ -141,9 +139,6 @@ class PcdTester(TesterBase):
             name = input_dict.pop("name")
             gt_coord = input_dict.pop("pred_coord")  # Ground Truth
             gt_coord = torch.tensor(gt_coord, dtype=torch.float32).cuda(non_blocking=True)
-            print("PCD TEST")
-            print("gt_coord", gt_coord.shape)
-            print("input_dict", input_dict.keys())
             # for key in input_dict.keys():
             #     if isinstance(input_dict[key], torch.Tensor):
             #         input_dict[key] = input_dict[key].cuda(non_blocking=True)
@@ -157,10 +152,8 @@ class PcdTester(TesterBase):
                     (i + 1) * fragment_batch_size, len(fragment_list)
                 )
                 input_dict = collate_fn(fragment_list[s_i:e_i])
-                print("input_dict!!!!!!!!", input_dict.keys())
                 for key in input_dict.keys():
                     if isinstance(input_dict[key], torch.Tensor):
-                        print("keyCUDA", key)
                         input_dict[key] = input_dict[key].cuda(non_blocking=True)
                 with torch.no_grad():
                     output_dict = self.model(input_dict)

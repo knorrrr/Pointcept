@@ -54,27 +54,20 @@ class Collect(object):
         """
         e.g. Collect(keys=[coord], feat_keys=[coord, color])
         """
-        print("Colling Collect!!!!!")
         if offset_keys_dict is None:
-            print("offset_keys_dict is None, using default offset_keys_dict")
             offset_keys_dict = dict(offset="coord")
         self.keys = keys
         self.offset_keys = offset_keys_dict
-        print(f"offset_keys_dict: {offset_keys_dict}")
         self.kwargs = kwargs
 
     def __call__(self, data_dict):
-        # print("Calling Call!!!!")
         data = dict()
-        # print(f"data_dict::::::: {data_dict.keys()}")
         if isinstance(self.keys, str):
             self.keys = [self.keys]
-        # print(f"self.keys:::: {self.keys}")
         for key in self.keys:
             data[key] = data_dict[key]
         for key, value in self.offset_keys.items():
             data[key] = torch.tensor([data_dict[value].shape[0]])
-            # print(f"key: {key}, value: {value}, data_dict[value]: {data_dict[value]}")
         for name, keys in self.kwargs.items():
             name = name.replace("_keys", "")
             assert isinstance(keys, Sequence)

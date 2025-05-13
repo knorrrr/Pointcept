@@ -160,8 +160,6 @@ class Trainer(TrainerBase):
             self.before_train()
             self.logger.info(">>>>>>>>>>>>>>>> Start Training >>>>>>>>>>>>>>>>")
             for self.epoch in range(self.start_epoch, self.max_epoch):
-                print(
-                    f"!!!!!!!Epoch {self.epoch}/{self.max_epoch} ")
                 # => before epoch
                 if comm.get_world_size() > 1:
                     self.train_loader.sampler.set_epoch(self.epoch)

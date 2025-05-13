@@ -44,7 +44,6 @@ class Point(Dict):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # print("Point.__init__!!!!!!!")
         # If one of "offset" or "batch" do not exist, generate by the existing one
         if "batch" not in self.keys() and "offset" in self.keys():
             self["batch"] = offset2batch(self.offset)
