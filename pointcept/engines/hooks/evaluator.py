@@ -39,7 +39,7 @@ class PcdEvaluator(HookBase):
                 output_dict = self.trainer.model(input_dict)
 
             pred_coord = output_dict["pred_coord"]      # [M, 3]
-            gt_coord = input_dict["pred_coord"]         # [N, 3]
+            gt_coord = input_dict["gt_pred_coord"]         # [N, 3]
             loss = output_dict["loss"]
 
             def safe_chamfer(pred, target, chunk_size=4096):

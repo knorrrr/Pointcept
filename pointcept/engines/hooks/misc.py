@@ -288,6 +288,8 @@ class PreciseEvaluator(HookBase):
         torch.cuda.empty_cache()
         cfg = self.trainer.cfg
         test_cfg = dict(cfg=cfg, model=self.trainer.model, **cfg.test)
+
+        # test_cfg = dict(cfg=cfg, **cfg.test)
         print("Start Precise Evaluation")
         tester = TESTERS.build(test_cfg)
         print("Tester built")

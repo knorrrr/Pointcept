@@ -50,7 +50,7 @@ class TesterBase:
         self.verbose = verbose
         if self.verbose:
             self.logger.info(f"Save path: {cfg.save_path}")
-            self.logger.info(f"Config:\n{cfg.pretty_text}")
+            # self.logger.info(f"Config:\n{cfg.pretty_text}")
         if model is None:
             self.logger.info("=> Building model ...")
             self.model = self.build_model()
@@ -137,7 +137,7 @@ class PcdTester(TesterBase):
         for idx, input_dict in enumerate(self.test_loader):
             input_dict = input_dict[0]  # batch_size=1 前提
             name = input_dict.pop("name")
-            gt_coord = input_dict.pop("pred_coord")  # Ground Truth
+            gt_coord = input_dict.pop("gt_pred_coord")  # Ground Truth
             gt_coord = torch.tensor(gt_coord, dtype=torch.float32).cuda(non_blocking=True)
             # for key in input_dict.keys():
             #     if isinstance(input_dict[key], torch.Tensor):

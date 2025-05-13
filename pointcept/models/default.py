@@ -82,11 +82,11 @@ class DefaultPcdPredictor(nn.Module):
             return_dict["point"] = point
         # train
         if self.training:
-            loss = self.criteria(pred_coord, input_dict["pred_coord"])
+            loss = self.criteria(pred_coord, input_dict["gt_pred_coord"])
             return_dict["loss"] = loss
         # eval
-        elif "pred_coord" in input_dict.keys():
-            loss = self.criteria(pred_coord, input_dict["pred_coord"])
+        elif "gt_pred_coord" in input_dict.keys():
+            loss = self.criteria(pred_coord, input_dict["gt_pred_coord"])
             return_dict["loss"] = loss
             return_dict["pred_coord"] = pred_coord 
         # test

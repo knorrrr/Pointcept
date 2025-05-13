@@ -146,18 +146,14 @@ class DefaultDataset(Dataset):
     def prepare_train_data(self, idx):
         # load data
         data_dict = self.get_data(idx)
-        print("data_dict before", data_dict.keys())
         data_dict = self.transform(data_dict)
-        print("DATA DICT:  ",data_dict.keys())
         return data_dict
 
     def prepare_test_data(self, idx):
         print("Original prepare_test_data")
         # load data
         data_dict = self.get_data(idx)
-        print("data_dict before", data_dict.keys())
         data_dict = self.transform(data_dict)
-        print("data_dict", data_dict.keys())
 
         result_dict = dict(segment=data_dict.pop("segment"), name=data_dict.pop("name"))
         if "origin_segment" in data_dict:

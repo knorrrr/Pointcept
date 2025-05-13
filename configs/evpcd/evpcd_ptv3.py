@@ -115,7 +115,7 @@ data = dict(
             dict(type="ToTensor"),
             dict(
                 type="Collect",
-                keys=("coord", "grid_coord", "pred_coord"),
+                keys=("coord", "grid_coord", "gt_pred_coord"),
                 feat_keys=("coord", "strength"),
             ),
         ],
@@ -139,7 +139,7 @@ data = dict(
             dict(type="ToTensor"),
             dict(
                 type="Collect",
-                keys=("coord", "grid_coord", "pred_coord"),
+                keys=("coord", "grid_coord", "gt_pred_coord"),
                 feat_keys=("coord", "strength"),
             ),
         ],

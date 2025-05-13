@@ -66,10 +66,10 @@ class EvPcdDataset(DefaultDataset):
         strength = points[:, 3].reshape([-1, 1]) / 255  # scale strength to [0, 1]
 
         pred_lidar_path = os.path.join(self.data_root, "raw", data["pred_lidar_path"])
-        pred_points = np.fromfile(str(pred_lidar_path), dtype=np.float32, count=-1).reshape(
+        gt_pred_points = np.fromfile(str(pred_lidar_path), dtype=np.float32, count=-1).reshape(
             [-1, 5]
         )
-        pred_coord = pred_points[:, :3]
+        gt_pred_coord = gt_pred_points[:, :3]
 
         # if "gt_segment_path" in data.keys():
         #     gt_segment_path = os.path.join(
@@ -86,7 +86,7 @@ class EvPcdDataset(DefaultDataset):
         data_dict = dict(
             coord=coord,
             strength=strength,
-            pred_coord=pred_coord,
+            gt_pred_coord=gt_pred_coord,
             # segment=segment,
             name=self.get_data_name(idx),
         )
@@ -102,7 +102,7 @@ class EvPcdDataset(DefaultDataset):
         data_dict = self.transform(data_dict)
 
         # 点群補完では pred_coord を ground truth として使用する
-        result_dict = dict(pred_coord=data_dict.pop("pred_coord"), name=data_dict.pop("name"))
+        result_dict = dict(gt_pred_coord=data_dict.pop("gt_pred_coord"), name=data_dict.pop("name"))
 
         if "origin_pred_coord" in data_dict:
             assert "inverse" in data_dict
