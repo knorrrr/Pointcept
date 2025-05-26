@@ -515,6 +515,99 @@ class Embedding(PointModule):
         return point
 
 
+import torch.nn.functional as F
+
+class PointVariableLengthTransformerDecoder(nn.Module):
+    def __init__(
+        self,
+        d_model,
+        nhead,
+        num_layers,
+        dim_feedforward=2048,
+        max_len=128,
+        dropout=0.1,# from pointcept.models.utils.structure import Point  # Point 型を使う
+
+        eos_token_id=None,
+        positional_encoding=True,
+        output_dim=3,  # <--- このパラメータを追加
+    ):
+        super().__init__()
+        self.eos_token_id = eos_token_id
+        self.max_len = max_len
+        self.d_model = d_model
+        self.output_dim = output_dim # <--- 保存
+
+        decoder_layer = nn.TransformerDecoderLayer(
+            d_model=d_model,
+            nhead=nhead,
+            dim_feedforward=dim_feedforward,
+            dropout=dropout,
+            batch_first=False,  # [seq_len, B, C]
+        )
+        self.decoder = nn.TransformerDecoder(decoder_layer, num_layers)
+        self.pos_encoding = self._build_pos_encoding(max_len, d_model) if positional_encoding else None
+        # self.embedding_proj = nn.Linear(d_model, d_model)  # optional start token projection
+        # output_proj を線形層に変更
+        self.output_proj = nn.Linear(d_model, self.output_dim) # <--- ここを変更
+
+    def _build_pos_encoding(self, max_len, d_model):
+        pe = torch.zeros(max_len, d_model)
+        position = torch.arange(0, max_len).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2) * -(torch.log(torch.tensor(10000.0)) / d_model))
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        return pe.unsqueeze(1)  # [max_len, 1, d_model]
+
+    def forward(self, point: Point):
+        """
+        Args:
+            point (Point): 入力されたPointインスタンス（backbone出力など）
+
+        Returns:
+            Point: featのみ上書きされた同じPoint（in-placeで更新）
+        """
+        batch_size = point.batch.max().item() + 1
+        device = point.feat.device
+
+        # memory の形状: [1, N, C]
+        # C (point.feat.shape[1]) は self.d_model と一致する必要があります。
+        aggregated_memory = torch_scatter.segment_csr(
+            src=point.feat,
+            indptr=nn.functional.pad(point.offset, (1, 0)), # point.offset は通常、バッチ境界のインデックスです
+            reduce="mean", # ここで平均集約を選択
+        )
+        # TransformerDecoder が期待する memory の形状は [seq_len, B, C] なので、
+        # シーケンス長が1 (シーンごとのグローバル特徴量) の次元を追加します。
+        memory = aggregated_memory.unsqueeze(0) # 形状: [1, batch_size, d_model]
+        tgt_seq = torch.zeros(1, batch_size, self.d_model, device=device)
+
+        outputs = []
+
+        for t in range(self.max_len):
+            if self.pos_encoding is not None:
+                tgt_embed = tgt_seq + self.pos_encoding[:t + 1].to(device)
+            else:
+                tgt_embed = tgt_seq
+
+            tgt_mask = nn.Transformer.generate_square_subsequent_mask(t + 1).to(device)
+            out = self.decoder(tgt_embed, memory, tgt_mask=tgt_mask)
+            current = out[-1]  # [B, C] (C は self.d_model)
+
+            # output_proj を通して、d_model次元からoutput_dim次元（ここでは3）に変換
+            projected_coords = self.output_proj(current) # <--- ここで変換
+            outputs.append(projected_coords.unsqueeze(0)) # <--- 変換された結果を追加
+
+            # 次のステップのために、現在生成されたトークン（ただしd_model次元のまま）をtgt_seqに連結
+            tgt_seq = torch.cat([tgt_seq, current.unsqueeze(0)], dim=0)
+
+        # [T, B, output_dim] → [B*T, output_dim]
+        out_feat = torch.cat(outputs, dim=0).transpose(0, 1).reshape(-1, self.output_dim) # <--- ここも output_dim に変更
+
+        # 書き換え：Pointインスタンスのfeatのみ上書き
+        point.feat = out_feat
+        return point
+
+
 @MODELS.register_module("PT-v3m1")
 class PointTransformerV3(PointModule):
     def __init__(
@@ -647,54 +740,55 @@ class PointTransformerV3(PointModule):
             if len(enc) != 0:
                 self.enc.add(module=enc, name=f"enc{s}")
 
-        # decoder
-        if not self.cls_mode:
-            dec_drop_path = [
-                x.item() for x in torch.linspace(0, drop_path, sum(dec_depths))
-            ]
-            self.dec = PointSequential()
-            dec_channels = list(dec_channels) + [enc_channels[-1]]
-            for s in reversed(range(self.num_stages - 1)):
-                dec_drop_path_ = dec_drop_path[
-                    sum(dec_depths[:s]) : sum(dec_depths[: s + 1])
-                ]
-                dec_drop_path_.reverse()
-                dec = PointSequential()
-                dec.add(
-                    SerializedUnpooling(
-                        in_channels=dec_channels[s + 1],
-                        skip_channels=enc_channels[s],
-                        out_channels=dec_channels[s],
-                        norm_layer=bn_layer,
-                        act_layer=act_layer,
-                    ),
-                    name="up",
-                )
-                for i in range(dec_depths[s]):
-                    dec.add(
-                        Block(
-                            channels=dec_channels[s],
-                            num_heads=dec_num_head[s],
-                            patch_size=dec_patch_size[s],
-                            mlp_ratio=mlp_ratio,
-                            qkv_bias=qkv_bias,
-                            qk_scale=qk_scale,
-                            attn_drop=attn_drop,
-                            proj_drop=proj_drop,
-                            drop_path=dec_drop_path_[i],
-                            norm_layer=ln_layer,
-                            act_layer=act_layer,
-                            pre_norm=pre_norm,
-                            order_index=i % len(self.order),
-                            cpe_indice_key=f"stage{s}",
-                            enable_rpe=enable_rpe,
-                            enable_flash=enable_flash,
-                            upcast_attention=upcast_attention,
-                            upcast_softmax=upcast_softmax,
-                        ),
-                        name=f"block{i}",
-                    )
-                self.dec.add(module=dec, name=f"dec{s}")
+        self.dec = PointVariableLengthTransformerDecoder(d_model=512, nhead=32,num_layers=6,max_len=19, output_dim=3)
+        # # decoder
+        # if not self.cls_mode:
+        #     dec_drop_path = [
+        #         x.item() for x in torch.linspace(0, drop_path, sum(dec_depths))
+        #     ]
+        #     self.dec = PointSequential()
+        #     dec_channels = list(dec_channels) + [enc_channels[-1]]
+        #     for s in reversed(range(self.num_stages - 1)):
+        #         dec_drop_path_ = dec_drop_path[
+        #             sum(dec_depths[:s]) : sum(dec_depths[: s + 1])
+        #         ]
+        #         dec_drop_path_.reverse()
+        #         dec = PointSequential()
+        #         dec.add(
+        #             SerializedUnpooling(
+        #                 in_channels=dec_channels[s + 1],
+        #                 skip_channels=enc_channels[s],
+        #                 out_channels=dec_channels[s],
+        #                 norm_layer=bn_layer,
+        #                 act_layer=act_layer,
+        #             ),
+        #             name="up",
+        #         )
+        #         for i in range(dec_depths[s]):
+        #             dec.add(
+        #                 Block(
+        #                     channels=dec_channels[s],
+        #                     num_heads=dec_num_head[s],
+        #                     patch_size=dec_patch_size[s],
+        #                     mlp_ratio=mlp_ratio,
+        #                     qkv_bias=qkv_bias,
+        #                     qk_scale=qk_scale,
+        #                     attn_drop=attn_drop,
+        #                     proj_drop=proj_drop,
+        #                     drop_path=dec_drop_path_[i],
+        #                     norm_layer=ln_layer,
+        #                     act_layer=act_layer,
+        #                     pre_norm=pre_norm,
+        #                     order_index=i % len(self.order),
+        #                     cpe_indice_key=f"stage{s}",
+        #                     enable_rpe=enable_rpe,
+        #                     enable_flash=enable_flash,
+        #                     upcast_attention=upcast_attention,
+        #                     upcast_softmax=upcast_softmax,
+        #                 ),
+        #                 name=f"block{i}",
+        #             )
+                # self.dec.add(module=dec, name=f"dec{s}")
 
 # 例：
     def forward(self, data_dict):
@@ -715,8 +809,26 @@ class PointTransformerV3(PointModule):
         #     return total_bytes
         # print(get_point_size(point))
         point = self.enc(point)
-        if not self.cls_mode:
-            point = self.dec(point)
+        print("===AFTER ENCORDER===")
+        for key in point.keys():
+            if isinstance(point[key], torch.Tensor):
+                if (key == "feat" or key == "coord" or key == "grid_coord"):
+                    print(key)
+                    print(point[key].shape)
+                if key == "offset":
+                    print(key)
+                    print(point[key])
+        print("===AFTER ENCORDER END===")
+        point = self.dec(point)
+        print("====AFTER DECODER====")
+        for key in point.keys():
+            if isinstance(point[key], torch.Tensor):
+                if (key == "feat" or key == "coord" or key == "grid_coord"):
+                    print(key)
+                    print(point[key].shape) 
+        print("====AFTER DECODER END====")
+        # if not self.cls_mode:
+        #     point = self.dec(point)
         # else:
         #     point.feat = torch_scatter.segment_csr(
         #         src=point.feat,

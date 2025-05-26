@@ -47,12 +47,12 @@ class DefaultPcdPredictor(nn.Module):
         freeze_backbone=False,
     ):
         super().__init__()
-        self.seg_head = (
-            # xyz :3 
-            nn.Linear(backbone_out_channels, 3)
-            # if num_classes > 0
-            # else nn.Identity()
-        )
+        # self.pcd_head = (
+        #     # xyz :3 
+        #     nn.Linear(backbone_out_channels, 3)
+        #     # if num_classes > 0
+        #     # else nn.Identity()
+        # )
         self.backbone = build_model(backbone)
         self.criteria = build_criteria(criteria)
         self.freeze_backbone = freeze_backbone
@@ -62,26 +62,62 @@ class DefaultPcdPredictor(nn.Module):
 
     def forward(self, input_dict, return_point=False):
         point = Point(input_dict)
+
+        print("===INPUT POINT===")
+        for key in point.keys():
+            if isinstance(point[key], torch.Tensor):
+                if (key == "feat" or key == "coord" or key == "grid_coord"):
+                    print(key)
+                    print(point[key].shape)
+        print("======INPUT END====")
+
         point = self.backbone(point)
+        print("===BACKBONE POINT===")
+        for key in point.keys():
+            if isinstance(point[key], torch.Tensor):
+                if (key == "feat" or key == "coord" or key == "grid_coord"):
+                    print(key)
+                    print(point[key].shape)
+        print("=====BACKBONE END======")
         # Backbone added after v1.5.0 return Point instead of feat and use DefaultSegmentorV2
         # TODO: remove this part after make all backbone return Point only.
-        if isinstance(point, Point):
-            while "pooling_parent" in point.keys():
-                assert "pooling_inverse" in point.keys()
-                parent = point.pop("pooling_parent")
-                inverse = point.pop("pooling_inverse")
-                parent.feat = torch.cat([parent.feat, point.feat[inverse]], dim=-1)
-                point = parent
-            feat = point.feat
-        else:
-            feat = point
-        pred_coord = self.seg_head(feat)
+        # if isinstance(point, Point):
+        #     while "pooling_parent" in point.keys():
+        #         assert "pooling_inverse" in point.keys()
+        #         parent = point.pop("pooling_parent")
+        #         inverse = point.pop("pooling_inverse")
+        #         parent.feat = torch.cat([parent.feat, point.feat[inverse]], dim=-1)
+        #         point = parent
+        #     feat = point.feat
+        # else:
+        #     feat = point
+        # pred_coord = self.pcd_head(feat)
+        pred_coord = point.feat
+        print("===PRED COORD===", pred_coord.shape)
         return_dict = dict()
         if return_point:
             # PCA evaluator parse feat and coord in point
             return_dict["point"] = point
         # train
         if self.training:
+            # def save_pcd(coord_tensor, filename):
+            #     import open3d as o3d
+            #     import os
+            #     # 必要なら保存先ディレクトリを指定
+            #     save_dir = "./pcd_output"
+            #     os.makedirs(save_dir, exist_ok=True)
+
+            #     # tensor を numpy に変換
+            #     coord_np = coord_tensor.detach().cpu().numpy()
+
+            #     # open3d 点群オブジェクトを生成
+            #     pcd = o3d.geometry.PointCloud()
+            #     pcd.points = o3d.utility.Vector3dVector(coord_np)
+
+            #     # 保存
+            #     save_path = os.path.join(save_dir, filename)
+            #     o3d.io.write_point_cloud(save_path, pcd)
+            # save_pcd(pred_coord, "predicted.pcd")
             loss = self.criteria(pred_coord, input_dict["gt_pred_coord"])
             return_dict["loss"] = loss
         # eval
